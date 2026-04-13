@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-base: #020617; /* slate-950 */
+    --accent-glow: rgba(168, 85, 247, 0.4); /* purple-500 */
+    --glass-bg: rgba(15, 23, 42, 0.6); /* slate-900 / 60% */
+    --glass-border: rgba(255, 255, 255, 0.08);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--bg-base);
+    color: #f8fafc;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  .glass-card {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+  }
+
+  .text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-image: linear-gradient(to right, #a855f7, #ec4899);
+  }
+
+  .glow-effect {
+    position: relative;
+  }
+
+  .glow-effect::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(to right, #a855f7, #3b82f6);
+    filter: blur(12px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: inherit;
+    z-index: -1;
+  }
+
+  .glow-effect:hover::before {
+    opacity: 0.6;
+  }
+}
+
+/* Background animated meshes */
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background-color: var(--bg-base);
+}
+
+.mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  animation: float 20s infinite ease-in-out alternate;
+}
+
+.blob-1 {
+  top: -10%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(168,85,247,0.4) 0%, rgba(0,0,0,0) 70%);
+  animation-delay: 0s;
+}
+
+.blob-2 {
+  bottom: -10%;
+  right: -10%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, rgba(0,0,0,0) 70%);
+  animation-delay: -5s;
+}
+
+.blob-3 {
+  top: 40%;
+  left: 60%;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, rgba(236,72,153,0.3) 0%, rgba(0,0,0,0) 70%);
+  animation-delay: -10s;
+  animation-duration: 25s;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5%, 5%) scale(1.1); }
+  100% { transform: translate(-5%, -5%) scale(0.9); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
