@@ -12,3 +12,8 @@ passlib
 bcrypt
 python-multipart
 httpx
+pydantic[email]
+python-jose[cryptography]
+groq
+apify-client
+pg8000
