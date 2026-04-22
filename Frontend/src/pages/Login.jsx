@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { FileText, Loader2, Mail, Lock } from 'lucide-react';
+import { Crown, Loader2, Mail, Lock } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -32,68 +32,103 @@ export default function Login() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="glass-card w-full max-w-md p-8 rounded-3xl relative overflow-hidden"
+        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="glass-card bg-white w-full max-w-md p-10 relative overflow-hidden"
+        style={{ background: '#FFFFFF' }}
       >
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-purple-500/30 rounded-full blur-3xl z-[-1]"></div>
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-pink-500/30 rounded-full blur-3xl z-[-1]"></div>
+        {/* Decorative glow corners */}
+        <div className="absolute top-0 right-0 w-40 h-40"
+          style={{ background: 'radial-gradient(circle at top right, rgba(197, 160, 89, 0.15), transparent 70%)' }}
+        />
+        <div className="absolute bottom-0 left-0 w-40 h-40"
+          style={{ background: 'radial-gradient(circle at bottom left, rgba(212, 175, 55, 0.1), transparent 70%)' }}
+        />
 
-        <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-            <FileText className="w-8 h-8 text-white" />
-          </div>
+        <div className="flex justify-center mb-8 relative z-10">
+          <motion.div 
+            className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            whileHover={{ rotate: 10, scale: 1.05 }}
+            transition={{ type: 'spring', stiffness: 300 }}
+            style={{ 
+              background: 'linear-gradient(135deg, #C5A059, #D4AF37)',
+              boxShadow: '0 8px 24px rgba(197, 160, 89, 0.25)'
+            }}
+          >
+            <Crown className="w-8 h-8 text-white" />
+          </motion.div>
         </div>
 
-        <h2 className="text-3xl font-bold text-center text-white mb-2">Welcome Back</h2>
-        <p className="text-center text-slate-400 mb-8">Sign in to continue to PrimoFlux</p>
+        <h2 className="text-3xl font-bold text-center mb-2 relative z-10" style={{ color: '#1C1C1C', fontFamily: "'Outfit', sans-serif" }}>
+          Welcome Back
+        </h2>
+        <p className="text-center mb-8 relative z-10 font-medium" style={{ color: '#82807C' }}>
+          Sign in to continue to PrimoFlux
+        </p>
 
         {error && (
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-xl text-sm mb-6 text-center"
+            className="p-3 rounded-xl text-sm mb-6 text-center relative z-10 font-medium"
+            style={{
+              background: 'rgba(196, 77, 77, 0.08)',
+              border: '1px solid rgba(196, 77, 77, 0.2)',
+              color: '#C44D4D'
+            }}
           >
             {error}
           </motion.div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 relative z-10" id="login-form">
           <div className="relative group">
-            <Mail className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-purple-400 transition-colors" />
+            <Mail className="absolute left-4 top-3.5 w-5 h-5 transition-colors" 
+              style={{ color: '#82807C' }} 
+            />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+              className="input-luxury"
               placeholder="Email Address"
               required
+              id="login-email"
             />
           </div>
 
           <div className="relative group">
-            <Lock className="absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-purple-400 transition-colors" />
+            <Lock className="absolute left-4 top-3.5 w-5 h-5 transition-colors" 
+              style={{ color: '#82807C' }} 
+            />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+              className="input-luxury"
               placeholder="Password"
               required
+              id="login-password"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transition-shadow flex justify-center items-center gap-2"
+            className="btn-gold w-full py-3.5 rounded-xl text-base flex justify-center items-center gap-2 disabled:opacity-60"
+            id="login-submit"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
+            <span>{loading ? '' : 'Sign In'}</span>
+            {loading && <Loader2 className="w-5 h-5 animate-spin relative z-10" />}
           </button>
         </form>
 
-        <p className="text-center text-slate-400 mt-8 text-sm">
+        <p className="text-center mt-8 text-sm relative z-10 font-medium" style={{ color: '#82807C' }}>
           Don't have an account?{' '}
-          <Link to="/register" className="text-purple-400 font-medium hover:text-purple-300 transition-colors">
+          <Link to="/register" className="font-semibold transition-colors"
+            style={{ color: '#C5A059' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#B89045'}
+            onMouseLeave={e => e.currentTarget.style.color = '#C5A059'}
+          >
             Create Free Account
           </Link>
         </p>

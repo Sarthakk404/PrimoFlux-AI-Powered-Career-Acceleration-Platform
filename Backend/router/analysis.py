@@ -1,10 +1,14 @@
 import os
+import re
 import json
 import logging
 from dotenv import load_dotenv
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
 import httpx
-from Backend import schemas
+from Backend import schemas, models
+from Backend.database import get_db
+from Backend.router.auth import get_current_user
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,6 +23,14 @@ logger.info(f"GEMINI key present: {bool(GEMINI_API_KEY)}")
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
+def strip_markdown_fences(text: str) -> str:
+    """Strip markdown code fences (```json ... ```) from LLM responses."""
+    text = text.strip()
+    # Remove ```json or ``` markers
+    text = re.sub(r'^```(?:json)?\s*\n?', '', text)
+    text = re.sub(r'\n?```\s*$', '', text)
+    return text.strip()
+
 async def call_groq(prompt: str) -> str:
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -29,7 +41,7 @@ async def call_groq(prompt: str) -> str:
         "model": "llama-3.3-70b-versatile",
         "messages": [{"role": "user", "content": prompt[:8000]}],
         "temperature": 0.7,
-        "max_tokens": 2000
+        "max_tokens": 4000
     }
     async with httpx.AsyncClient() as client:
         logger.info("Calling Groq API...")
@@ -71,23 +83,43 @@ async def get_ai_response(prompt: str) -> str:
     logger.error("No AI API key configured")
     raise HTTPException(status_code=500, detail="No AI API key configured")
 
-def parse_analysis_response(response_text: str) -> dict:
+def parse_json_response(response_text: str) -> dict:
+    """Parse JSON from LLM response, handling markdown-wrapped JSON."""
+    cleaned = strip_markdown_fences(response_text)
     try:
-        data = json.loads(response_text)
-        return data
+        return json.loads(cleaned)
     except json.JSONDecodeError:
-        lines = response_text.strip().split("\n")
-        result = {"score": 50, "strengths": [], "weaknesses": [], "ats_compatibility": "Unknown", "line_improvements": [], "overall_summary": response_text}
-        for line in lines:
-            if line.lower().startswith("score:"):
-                try:
-                    result["score"] = int(line.split(":")[1].strip())
-                except:
-                    pass
-        return result
+        logger.warning(f"Failed to parse JSON, attempting extraction from response")
+        # Try to find JSON object within the text
+        json_match = re.search(r'\{[\s\S]*\}', cleaned)
+        if json_match:
+            try:
+                return json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
+        return None
+
+def parse_analysis_response(response_text: str) -> dict:
+    data = parse_json_response(response_text)
+    if data:
+        return data
+    
+    # Fallback: extract what we can from plain text
+    lines = response_text.strip().split("\n")
+    result = {"score": 50, "strengths": [], "weaknesses": [], "ats_compatibility": "Unknown", "line_improvements": [], "overall_summary": response_text[:500]}
+    for line in lines:
+        if line.lower().startswith("score:"):
+            try:
+                result["score"] = int(re.search(r'\d+', line.split(":")[1]).group())
+            except:
+                pass
+    return result
 
 @router.post("/resume", response_model=schemas.AnalysisResponse)
-async def analyze_resume(request: schemas.AnalysisRequest):
+async def analyze_resume(
+    request: schemas.AnalysisRequest,
+    current_user: models.User = Depends(get_current_user)
+):
     prompt = f"""You are an expert resume analyzer. Analyze the following resume and provide detailed feedback in JSON format.
 
 Resume:
@@ -125,11 +157,17 @@ Return ONLY valid JSON, no other text."""
             line_improvements=[schemas.LineImprovement(**l) for l in parsed.get("line_improvements", [])],
             overall_summary=parsed.get("overall_summary", "")
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Analysis failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 @router.post("/skills-gap", response_model=schemas.SkillsGapResponse)
-async def analyze_skills_gap(request: schemas.SkillsGapRequest):
+async def analyze_skills_gap(
+    request: schemas.SkillsGapRequest,
+    current_user: models.User = Depends(get_current_user)
+):
     prompt = f"""You are an expert career analyzer. Compare the resume with the job description and identify skill gaps.
 
 Resume:
@@ -156,26 +194,33 @@ Return ONLY valid JSON, no other text."""
 
     try:
         response = await get_ai_response(prompt)
-        parsed = json.loads(response)
+        parsed = parse_json_response(response)
         
-        return schemas.SkillsGapResponse(
-            matched_skills=parsed.get("matched_skills", []),
-            missing_skills=parsed.get("missing_skills", []),
-            gap_percentage=parsed.get("gap_percentage", 0),
-            recommendations=parsed.get("recommendations", [])
-        )
-    except json.JSONDecodeError:
-        return schemas.SkillsGapResponse(
-            matched_skills=[],
-            missing_skills=[],
-            gap_percentage=100,
-            recommendations=["Unable to parse response"]
-        )
+        if parsed:
+            return schemas.SkillsGapResponse(
+                matched_skills=parsed.get("matched_skills", []),
+                missing_skills=parsed.get("missing_skills", []),
+                gap_percentage=parsed.get("gap_percentage", 0),
+                recommendations=parsed.get("recommendations", [])
+            )
+        else:
+            return schemas.SkillsGapResponse(
+                matched_skills=[],
+                missing_skills=[],
+                gap_percentage=100,
+                recommendations=["AI returned an unparseable response. Please try again."]
+            )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Skills gap analysis failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Skills gap analysis failed: {str(e)}")
 
 @router.post("/cover-letter", response_model=schemas.CoverLetterResponse)
-async def generate_cover_letter(request: schemas.CoverLetterRequest):
+async def generate_cover_letter(
+    request: schemas.CoverLetterRequest,
+    current_user: models.User = Depends(get_current_user)
+):
     prompt = f"""You are an expert cover letter writer. Generate a personalized, professional cover letter.
 
 Resume:
@@ -199,5 +244,8 @@ Do NOT include any JSON - just the cover letter text."""
     try:
         response = await get_ai_response(prompt)
         return schemas.CoverLetterResponse(cover_letter=response.strip())
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Cover letter generation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Cover letter generation failed: {str(e)}")
