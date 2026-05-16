@@ -17,7 +17,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173",
-        "https://primoflux-ai-powered-career-acceleration.onrender.com/"],
+        "https://primo-flux-ai-powered-career-accele.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
